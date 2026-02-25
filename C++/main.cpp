@@ -38,4 +38,38 @@ int main()
         }
         cout << endl;
     }
+
+    // Example of view
+    cout << endl;
+    for(int i = 0; i < floatArr.shape[0]; i++)
+    {
+        for(int j = 0; j < floatArr.shape[1]; j++)
+        {
+            cout << floatArr(i, j) << " ";
+        }
+        cout << endl;
+    }
+
+    contiguous(floatArr);
+    cout << endl;
+    for(int i = 0; i < floatArr.shape[0]; i++)
+    {
+        for(int j = 0; j < floatArr.shape[1]; j++)
+        {
+            cout << floatArr(i, j) << " ";
+        }
+        cout << endl;
+    }
+
+    view(floatArr, 1, 6);
+    cout << endl;
+
+    for(int i = 0; i < floatArr.shape[0]; i++)
+    {
+        for(int j = 0; j < floatArr.shape[1]; j++)
+        {
+            cout << floatArr(i, j) << " ";
+        }
+        cout << endl;
+    }
 }

@@ -18,9 +18,9 @@ public:
 
         std::copy(list.begin(), list.end(), shape);
 
-        // Initialize stride
+        // Initialize stride        
         size = 1;
-        for (int i = dim - 1; i >= 0; --i)
+        for (int i = dim - 1; i >= 0; i--)
         {
             stride[i] = size;
             size *= shape[i];
@@ -80,9 +80,9 @@ public:
     template <typename... Args>
     inline T &operator[](Args... args)
     {
+        int index = 0;
         int list[] = {args...};
-        int size = sizeof(list) / sizeof(list[0]), index = 0;
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < dim; i++)
             index += (list[i] * stride[i]);
         return arr[index];
     }
@@ -100,15 +100,34 @@ public:
         return arr[index];
     }
 
+    inline T get(int *args)
+    {
+        int index = 0;
+        for (int i = 0; i < dim; ++i)
+        {
+            index += args[i] * stride[i];
+        }        
+        return arr[index];
+    }
+
+    inline void push(int *args, T val)
+    {
+        int index = 0;
+        for (int i = 0; i < dim; i++)
+            index += (args[i] * stride[i]);
+        arr[index] = val;
+    }
+
     void Print()
     {
         std::cout << size << " " << dim << std::endl;
+        std::cout << "Stride: ";
         for (int i = 0; i < dim; i++)
             std::cout << stride[i] << " ";
-        std::cout << std::endl;
+        std::cout << std::endl << "Shape: ";
         for (int i = 0; i < dim; i++)
             std::cout << shape[i] << " ";
-        std::cout << std::endl;
+        std::cout << std::endl << "Array: ";
         for (int i = 0; i < size; i++)
             std::cout << arr[i] << " ";
         std::cout << std::endl;

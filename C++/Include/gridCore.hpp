@@ -3,14 +3,15 @@
 #include <iostream>
 
 template <typename T>
-class gridCore
+class grid
 {
+public:
     T *arr;
     size_t size, dim;
     size_t *stride, *shape;
-
-public:
-    gridCore(std::initializer_list<int> list, T val) : dim(list.size())
+    
+    grid(){}
+    grid(std::initializer_list<int> list, T val) : dim(list.size())
     {
         stride = new size_t[list.size()];
         shape = new size_t[list.size()];
@@ -29,14 +30,14 @@ public:
         std::fill(arr, arr + size, val);
     }
 
-    ~gridCore() noexcept
+    ~grid() noexcept
     {
         delete[] arr;
         delete[] stride;
         delete[] shape;
     }
 
-    gridCore(const gridCore<T> &other)
+    grid(const grid<T> &other)
     {
         dim = other.dim;
         size = other.size;
@@ -52,7 +53,7 @@ public:
 
     // This function move one grid to other gird
     // This function does not copy
-    gridCore<T> &operator=(gridCore<T> &other)
+    grid<T> &operator=(grid<T> &other)
     {
         if (this != &other)
         {
@@ -75,24 +76,18 @@ public:
         return *this;
     }
 
-    int GetIndex(std::initializer_list<int> &list)
+    // Update value at index
+    template <typename... Args>
+    inline T &operator[](Args... args)
     {
-        if (list.size() != dim)
-        {
-            std::cerr << "Dim misMatch got " << std::endl;
-            exit(0);
-        }
-        int index = 0, i = 0;
-        for (int val : list)
-        {
-            index += (val * stride[i]);
-            i += 1;
-        }
-        return index;
+        int list[] = {args...};
+        int size = sizeof(list) / sizeof(list[0]), index = 0;
+        for (int i = 0; i < size; i++)
+            index += (list[i] * stride[i]);
+        return arr[index];
     }
 
-    inline T &operator[](int index) { return arr[index]; }
-
+    // Get value at index
     template <typename... Args>
     inline T &operator()(Args... args)
     {

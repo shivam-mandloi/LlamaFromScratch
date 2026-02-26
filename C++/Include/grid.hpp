@@ -31,6 +31,7 @@ void view(grid<T> &val, Args ...args)
 
     val.shape = new size_t[size];
     val.stride = new size_t[size];
+    val.dim = size;
     
     for(int i = 0; i < size; i++)    
         val.shape[i] = indices[i];
@@ -47,7 +48,7 @@ void ContiguousHF(grid<T> &arr, T *newArr, int* index, int dim, int &actualIndex
 {
     if(arr.dim == dim)
     {
-        newArr[actualIndex] = arr.get(index);
+        newArr[actualIndex] = arr.get(index);        
         return;
     }
 
@@ -57,6 +58,7 @@ void ContiguousHF(grid<T> &arr, T *newArr, int* index, int dim, int &actualIndex
         ContiguousHF(arr, newArr, index, dim + 1, actualIndex);
         actualIndex += 1;
     }
+    actualIndex-=1;
 }
 
 template<typename T>
@@ -76,4 +78,32 @@ void contiguous(grid<T> &arr)
         arr.stride[i] = size;
         size *= arr.shape[i];
     }
+}
+
+
+template<typename T>
+void printHF(grid<T> &arr, int dim, int *index)
+{
+    if(dim == arr.dim)
+    {
+        std::cout << arr.get(index) << " ";
+        return ;
+    }    
+
+    for(int i = 0; i < arr.shape[dim]; i++)
+    {
+        index[dim] = i;
+        printHF(arr, dim + 1, index);
+    }
+    std::cout << std::endl;
+}
+
+template<typename T>
+void print(grid<T> &arr)
+{
+    int dim = 0;
+    int *index = new int[arr.dim];
+    std::fill(index, index + arr.dim, 0);
+
+    printHF(arr, dim, index);
 }

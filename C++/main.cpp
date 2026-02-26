@@ -4,72 +4,22 @@ using namespace std;
 
 int main()
 {
-    grid<int> gdCore({2, 2, 3}, 4);
-    gdCore.Print();
-    std::cout << gdCore(0, 0, 1) << std::endl;
+    grid<int> arr({3, 4, 2}, 4);
+    
+    arr[0, 1, 1] = -1;
+    print(arr);
 
-    grid<int> anotherOne(gdCore); // copy gdCore variable to anotherOne
-    anotherOne = gdCore; // not copy transfer from gdCore to anotherOne
-    anotherOne[0, 0, 1] = 1;
-    std::cout << anotherOne(0, 0, 1) << std::endl;
-    anotherOne.Print();
+    view(arr, 3, 8);    
+    print(arr);
+    arr[1, 7] = -10;
+    print(arr);
 
     
-    // Example of Permute
-    grid<float> floatArr({3, 2}, 0);
-    floatArr[1,1] = -1;
-    floatArr[0,1] = -2;
-    cout << endl;
-    for(int i = 0; i < floatArr.shape[0]; i++)
-    {
-        for(int j = 0; j < floatArr.shape[1]; j++)
-        {
-            cout << floatArr(i, j) << " ";
-        }
-        cout << endl;
-    }
-    cout << endl;
-    permute(floatArr, 1, 0);
-    for(int i = 0; i < floatArr.shape[0]; i++)
-    {
-        for(int j = 0; j < floatArr.shape[1]; j++)
-        {
-            cout << floatArr(i, j) << " ";
-        }
-        cout << endl;
-    }
+    permute(arr, 1, 0);
+    print(arr);
+    contiguous(arr);
+    view(arr, 4, 2, 3);
+    cout << "After contiguous" << endl;
+    print(arr);
 
-    // Example of view
-    cout << endl;
-    for(int i = 0; i < floatArr.shape[0]; i++)
-    {
-        for(int j = 0; j < floatArr.shape[1]; j++)
-        {
-            cout << floatArr(i, j) << " ";
-        }
-        cout << endl;
-    }
-
-    contiguous(floatArr);
-    cout << endl;
-    for(int i = 0; i < floatArr.shape[0]; i++)
-    {
-        for(int j = 0; j < floatArr.shape[1]; j++)
-        {
-            cout << floatArr(i, j) << " ";
-        }
-        cout << endl;
-    }
-
-    view(floatArr, 1, 6);
-    cout << endl;
-
-    for(int i = 0; i < floatArr.shape[0]; i++)
-    {
-        for(int j = 0; j < floatArr.shape[1]; j++)
-        {
-            cout << floatArr(i, j) << " ";
-        }
-        cout << endl;
-    }
 }

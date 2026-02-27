@@ -2,6 +2,10 @@
 
 #include "gridCore.hpp"
 
+
+/*
+    Basic Operations
+*/
 template<typename T, typename ...Args>
 void permute(grid<T> &val, Args ...args)
 {
@@ -48,17 +52,15 @@ void ContiguousHF(grid<T> &arr, T *newArr, int* index, int dim, int &actualIndex
 {
     if(arr.dim == dim)
     {
-        newArr[actualIndex] = arr.get(index);        
+        newArr[actualIndex++] = arr.get(index);
         return;
     }
 
     for(int i = 0; i < arr.shape[dim]; i++)
     {
         index[dim] = i;
-        ContiguousHF(arr, newArr, index, dim + 1, actualIndex);
-        actualIndex += 1;
+        ContiguousHF(arr, newArr, index, dim + 1, actualIndex);        
     }
-    actualIndex-=1;
 }
 
 template<typename T>
@@ -71,6 +73,8 @@ void contiguous(grid<T> &arr)
     ContiguousHF(arr, newArr, index, dim, actualIndex);
 
     delete[] arr.arr;
+    delete[] index;
+
     arr.arr = newArr;
     int size = 1;
     for (int i = arr.dim - 1; i >= 0; i--)
@@ -78,6 +82,7 @@ void contiguous(grid<T> &arr)
         arr.stride[i] = size;
         size *= arr.shape[i];
     }
+
 }
 
 
@@ -106,4 +111,5 @@ void print(grid<T> &arr)
     std::fill(index, index + arr.dim, 0);
 
     printHF(arr, dim, index);
+    delete[] index;
 }

@@ -10,7 +10,15 @@ public:
     size_t size, dim;
     size_t *stride, *shape;
     
-    grid(){}
+    grid()
+    {
+        arr = nullptr;
+        size = 0;
+        dim = 0;
+        stride = nullptr;
+        shape = nullptr;
+    }
+
     grid(std::initializer_list<int> list, T val) : dim(list.size())
     {
         stride = new size_t[list.size()];
@@ -116,20 +124,5 @@ public:
         for (int i = 0; i < dim; i++)
             index += (args[i] * stride[i]);
         arr[index] = val;
-    }
-
-    void Print()
-    {
-        std::cout << size << " " << dim << std::endl;
-        std::cout << "Stride: ";
-        for (int i = 0; i < dim; i++)
-            std::cout << stride[i] << " ";
-        std::cout << std::endl << "Shape: ";
-        for (int i = 0; i < dim; i++)
-            std::cout << shape[i] << " ";
-        std::cout << std::endl << "Array: ";
-        for (int i = 0; i < size; i++)
-            std::cout << arr[i] << " ";
-        std::cout << std::endl;
     }
 };

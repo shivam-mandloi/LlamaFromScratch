@@ -7,7 +7,7 @@ class RunScript:
     def __init__(self, args, filename=""):
         self.wkDir = os.getcwd()
         self.filename = os.path.join(self.wkDir, filename)
-        self.args = ["g++", "-std=c++23", self.filename] + self.GetAllDir() + ["-o", "main"] + args
+        self.args = ["g++", "-std=c++23", self.filename, "-lopenblas"] + self.GetAllDir() + ["-o", "main"] + args
         self.startRun = [os.path.join(self.wkDir,"./main")]
 
     def GetAllDir(self):
@@ -34,6 +34,6 @@ class RunScript:
         self.PrintStatus(result)
 
 if __name__ == "__main__":
-    filename = "main.cpp"
+    filename = "testBlas.cpp"
     script = RunScript([], filename)
     script.Run()

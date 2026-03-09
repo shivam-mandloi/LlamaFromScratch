@@ -12,7 +12,8 @@ I want to deeply understand how a large language model works internally by **bui
 ## 🎯 Project Goals
 
 - Implement **LLaMA-3 architecture from scratch**
-- Use **only C++**, without any external ML or math libraries
+- Use **C++**, without any external ML or math libraries
+- Only use **OpenBLAS (via WSL2)** for high-performance linear algebra operations
 - Work with **raw arrays** for matrix and vector representation
 - Focus on **CPU-based computation and optimization**
 - First implement **forward propagation**
@@ -26,7 +27,7 @@ This project is meant to **build intuition**, not to create a highly optimized o
 ## 🧠 Learning Philosophy
 
 - No shortcuts
-- No black-box libraries
+- No black-box ML libraries (except OpenBLAS for optimized linear algebra)
 - No Hugging Face APIs
 - No pre-built deep learning frameworks in C++
 
@@ -86,7 +87,7 @@ You **must run `LlamaWeightStore.ipynb` first**, otherwise the model will not wo
 - C++ implementation will start now
 - Built **fully from scratch**
 - Uses **raw arrays** for vectors and matrices
-- No external libraries
+- Uses **OpenBLAS (via WSL2)** for optimized linear algebra operations
 - Focused mainly on **inference**
 - Helps understand **low-level execution and memory handling**
 

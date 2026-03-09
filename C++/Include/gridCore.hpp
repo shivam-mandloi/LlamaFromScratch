@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
 
 template <typename T>
 class grid
@@ -20,6 +21,25 @@ public:
     }
 
     grid(std::initializer_list<int> list, T val) : dim(list.size())
+    {
+        stride = new size_t[list.size()];
+        shape = new size_t[list.size()];
+
+        std::copy(list.begin(), list.end(), shape);
+
+        // Initialize stride        
+        size = 1;
+        for (int i = dim - 1; i >= 0; i--)
+        {
+            stride[i] = size;
+            size *= shape[i];
+        }
+
+        arr = new T[size];
+        std::fill(arr, arr + size, val);
+    }
+
+    grid(std::vector<int> list, T val) : dim(list.size())
     {
         stride = new size_t[list.size()];
         shape = new size_t[list.size()];
@@ -124,5 +144,15 @@ public:
         for (int i = 0; i < dim; i++)
             index += (args[i] * stride[i]);
         arr[index] = val;
+    }
+
+    inline int GetIndex(int *args)
+    {
+        int index = 0;
+        for (int i = 0; i < dim; ++i)
+        {
+            index += args[i] * stride[i];
+        }
+        return index;
     }
 };

@@ -216,7 +216,7 @@ void MultiplicationHF(grid<T> &a,
 }
 
 template <typename T>
-grid<T> Multiplication(grid<T> &a, grid<T> &b)
+grid<T> Multiplication(grid<T> &a, grid<T> &b, bool isContiguous = false)
 {
     /*
         c = a @ b
@@ -238,8 +238,11 @@ grid<T> Multiplication(grid<T> &a, grid<T> &b)
     }
 
     // update matrix a and b
-    contiguous(a);
-    contiguous(b);
+    if(!isContiguous)
+    {
+        contiguous(a);
+        contiguous(b);
+    }
 
     // initialize the all three tensor index
     int *index1 = new int[a.dim]();
@@ -280,4 +283,36 @@ grid<T> Multiplication(grid<T> &a, grid<T> &b)
     delete[] index3;
 
     return c;
+}
+
+template <typename T>
+grid<T> Addition(grid<T> &a, grid<T> &b, bool isContiguous = false)
+{
+    /*
+        Note:
+            - Does not check if all the dimension size match
+            - Is grid same for virtual and actual 
+    */
+    if(a.dim != b.dim || a.size != b.size)
+    {
+        std::cout << "Matrix Multiplication shape or dim not match" << std::endl;
+        exit(0);
+    }
+    
+    if(!isContiguous)
+    {
+        contiguous(a);
+        contiguous(b);
+    }
+
+    grid<T> c(b);
+
+    cblas_daxpy(a.size, 1.0, a.arr, 1, c.arr, 1);
+    return c;
+}
+
+template <typename T>
+void ScalarMul(grid<T> &a, double scalar)
+{    
+    cblas_dscal(a.size, scalar, a.arr, 1);
 }

@@ -9,12 +9,13 @@ int main()
     arr(0, 1, 1) = -1;
     print(arr);
 
+    // view
     view(arr, 3, 8);    
     print(arr);
     arr[1, 7] = -10;
     print(arr);
 
-    
+    // permute - contiguous
     permute(arr, 1, 0);
     print(arr);
     contiguous(arr);
@@ -37,4 +38,9 @@ int main()
     view(vec, 5);
     print(vec);
 
+    // Matrix Multiplication
+    grid<double> C({1, 2}, 1);
+    grid<double> A({2, 1}, 2);
+    grid<double> B = Multiplication(C, A);
+    print(B);    
 }

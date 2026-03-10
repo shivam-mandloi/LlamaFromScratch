@@ -129,9 +129,9 @@ void MultiplicationHF(grid<T> &a,
                       int &n1,
                       int &m2,
                       int &n2,
-                      int *arr1,
-                      int *arr2,
-                      int *res)
+                      double *arr1,
+                      double *arr2,
+                      double *res)
 {
     /*
         Parameters:
@@ -158,7 +158,7 @@ void MultiplicationHF(grid<T> &a,
         std::copy(a.arr + startPntrForFirst, a.arr + startPntrForFirst + (m1 * n1), arr1);
         std::copy(b.arr + startPntrForSecond, b.arr + startPntrForSecond + (m2 * n2), arr2);
 
-        // Perform matrix multiplication        
+        // Perform matrix multiplication
         cblas_dgemm(
             CblasRowMajor,
             CblasNoTrans,
@@ -174,7 +174,7 @@ void MultiplicationHF(grid<T> &a,
             0.0,
             res,
             n2);
-        
+
         // If Grids are float type
         // cblas_sgemm (
         //     CblasRowMajor,
@@ -191,7 +191,6 @@ void MultiplicationHF(grid<T> &a,
         //     0.0,
         //     res,
         //     n2);
-
 
         int startCrntIndexRes = c.GetIndex(index3);
 
@@ -212,8 +211,7 @@ void MultiplicationHF(grid<T> &a,
         index2[dim] = (b.shape[dim] == 1) ? 0 : i;
         index3[dim] = i;
 
-        Multiplication(a, b, c, index1, index2, index3, dim + 1, m1, n1, m2, n2, arr1, arr2, res);
-
+        MultiplicationHF(a, b, c, index1, index2, index3, dim + 1, m1, n1, m2, n2, arr1, arr2, res);
     }
 }
 
@@ -232,8 +230,9 @@ grid<T> Multiplication(grid<T> &a, grid<T> &b)
             - Third point (Above point) never check if multiplication is right it can also multiply the case for example (4, 1, 3, 2) X (1, 3, 2, 4)
             - Only for float or double type grid, needs to uncomment based on type of grid
     */
-    if (a.dim != b.dim || a.dim < 2 || a.size != b.size)
+    if (a.dim != b.dim || a.dim < 2)
     {
+        // std::cout << a.dim << " " << b.dim << " " << a.size << " " << b.size << std::endl; 
         std::cout << "Matrix Multiplication shape or dim not match" << std::endl;
         exit(0);
     }

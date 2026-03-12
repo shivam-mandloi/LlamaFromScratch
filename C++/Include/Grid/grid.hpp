@@ -3,6 +3,8 @@
 #include "gridCore.hpp"
 #include <cblas.h>
 #include <algorithm>
+#include <string>
+#include <fstream>
 
 /*
     Basic
@@ -232,13 +234,13 @@ grid<T> Multiplication(grid<T> &a, grid<T> &b, bool isContiguous = false)
     */
     if (a.dim != b.dim || a.dim < 2)
     {
-        // std::cout << a.dim << " " << b.dim << " " << a.size << " " << b.size << std::endl; 
+        // std::cout << a.dim << " " << b.dim << " " << a.size << " " << b.size << std::endl;
         std::cout << "Matrix Multiplication shape or dim not match" << std::endl;
         exit(0);
     }
 
     // update matrix a and b
-    if(!isContiguous)
+    if (!isContiguous)
     {
         contiguous(a);
         contiguous(b);
@@ -291,15 +293,15 @@ grid<T> Addition(grid<T> &a, grid<T> &b, bool isContiguous = false)
     /*
         Note:
             - Does not check if all the dimension size match
-            - Is grid same for virtual and actual 
+            - Is grid same for virtual and actual
     */
-    if(a.dim != b.dim || a.size != b.size)
+    if (a.dim != b.dim || a.size != b.size)
     {
         std::cout << "Matrix Multiplication shape or dim not match" << std::endl;
         exit(0);
     }
-    
-    if(!isContiguous)
+
+    if (!isContiguous)
     {
         contiguous(a);
         contiguous(b);
@@ -313,6 +315,26 @@ grid<T> Addition(grid<T> &a, grid<T> &b, bool isContiguous = false)
 
 template <typename T>
 void ScalarMul(grid<T> &a, double scalar)
-{    
+{
     cblas_dscal(a.size, scalar, a.arr, 1);
 }
+
+// std::vector<NeuroVec<double>> ReadTxtFile(std::string path)
+// {
+//     std::fstream newFile;
+//     std::string temp;
+//     std::vector<NeuroVec<double>> res;
+//     newFile.open(path, std::ios::in);
+//     if (!newFile.is_open())
+//     {
+//         std::cerr << "Error: Could not open file " << path << std::endl;
+//         exit(0);
+//     }
+    
+//     while (getline(newFile, temp))
+//     {
+//         if (temp != "")
+//             res.push_back(ConvertVectorToNeuroVec(SplitString(temp)));
+//     }
+//     return res;
+// }

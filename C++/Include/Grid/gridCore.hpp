@@ -10,7 +10,7 @@ public:
     T *arr;
     size_t size, dim;
     size_t *stride, *shape;
-    
+
     grid()
     {
         arr = nullptr;
@@ -27,7 +27,7 @@ public:
 
         std::copy(list.begin(), list.end(), shape);
 
-        // Initialize stride        
+        // Initialize stride
         size = 1;
         for (int i = dim - 1; i >= 0; i--)
         {
@@ -46,7 +46,7 @@ public:
 
         std::copy(list.begin(), list.end(), shape);
 
-        // Initialize stride        
+        // Initialize stride
         size = 1;
         for (int i = dim - 1; i >= 0; i--)
         {
@@ -134,7 +134,7 @@ public:
         for (int i = 0; i < dim; ++i)
         {
             index += args[i] * stride[i];
-        }        
+        }
         return arr[index];
     }
 

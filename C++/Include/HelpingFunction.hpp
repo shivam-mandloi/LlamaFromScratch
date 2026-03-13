@@ -2,7 +2,8 @@
 
 #include <string>
 #include <fstream>
-
+#include <vector>
+#include <thread>
 
 std::string weightPathLocation = "/mnt/c/Users/shiva/Desktop/IISC/LLAMA/LLAMA_Weights";
 
@@ -23,5 +24,32 @@ std::string ReadTxtFile(std::string fileName)
         if (temp != "")
             res += temp;
     }
+    return res;
+}
+
+std::vector<std::string> SplitString(const std::string& str, const std::string& spliter) 
+{
+    std::vector<std::string> res;
+    
+    if (str.empty() || spliter.empty()) return res;
+
+    size_t start = 0;
+    size_t end = str.find(spliter);
+
+    while (end != std::string::npos) 
+    {        
+        if (end > start) 
+        {
+            res.emplace_back(str.substr(start, end - start));
+        }        
+        start = end + spliter.length();        
+        end = str.find(spliter, start);
+    }
+    
+    if (start < str.length()) 
+    {
+        res.emplace_back(str.substr(start));
+    }
+
     return res;
 }

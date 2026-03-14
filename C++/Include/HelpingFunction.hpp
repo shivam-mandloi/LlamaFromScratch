@@ -5,6 +5,8 @@
 #include <vector>
 #include <thread>
 
+#include "grid.hpp"
+
 std::string weightPathLocation = "/mnt/c/Users/shiva/Desktop/IISC/LLAMA/LLAMA_Weights";
 
 std::string ReadTxtFile(std::string fileName)
@@ -51,5 +53,14 @@ std::vector<std::string> SplitString(const std::string& str, const std::string& 
         res.emplace_back(str.substr(start));
     }
 
+    return res;
+}
+
+
+template<typename T>
+grid<T> VectorToGrid(std::vector<T> &arr)
+{
+    grid<T> res({arr.size(), }, 0);
+    std::copy(arr.begin(), arr.end(), res.arr);
     return res;
 }

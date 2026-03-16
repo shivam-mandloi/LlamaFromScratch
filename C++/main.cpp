@@ -4,21 +4,34 @@ using namespace std;
 
 int main()
 {
-    auto start = std::chrono::steady_clock::now();
+    // auto start = std::chrono::steady_clock::now();
     // auto totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     // totalTime.count()
 
     tokenizer tkn;
-    grid<int> encdInpt = tkn.encode("Context:\nMy name is shivam mandloi. I am a MTech(AI) student at IISc banglore, I love to write a code and learn machine leanring. I use C++/python to write code. \nInstruction:\nYou are a AI assistant of person whos informtion given in Context section.\nQuestion:\nWho are you, what realtion you share with shivam mandloi?\n");
-    auto mid = std::chrono::steady_clock::now();
-    print(encdInpt);
-    cout << tkn.decode(encdInpt) << std::endl;
+    grid<int> encdInpt = tkn.encode("testing is going on... ha ha ha");
+    // print(encdInpt);
+    cout << tkn.decode(encdInpt) << std::endl;    
+    
+    string filePath = "model.embed_tokens.weight.bin";
+
+    grid<float> tknEmbd({128256, 4096}, 0);
+
+    auto start = std::chrono::steady_clock::now();
+    LoadBin(filePath, tknEmbd.arr, tknEmbd.size);
     auto end = std::chrono::steady_clock::now();
 
     auto a1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    auto a2 = std::chrono::duration_cast<std::chrono::milliseconds>(mid - start);
-    auto a3 = std::chrono::duration_cast<std::chrono::milliseconds>(end - mid);
+    cout << "Time To read file: " << a1.count() << "ms" << std::endl;
 
-    cout << "Total Time: " << a1.count() << "ms |  Encrypt Time: " << a2.count() << "ms | Decrypted Time " << a3.count() << endl;
+    grid<float> temp({4096, 1}, 0);
+
+    start = std::chrono::steady_clock::now();
+    grid<float> res = Multiplication(tknEmbd, temp);
+    end = std::chrono::steady_clock::now();
+    
+    a1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    cout << "Time to multiply matrix: " << a1.count() << "ms" << std::endl;
+
     return 0;
 }

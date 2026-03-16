@@ -131,9 +131,9 @@ void MultiplicationHF(grid<T> &a,
                       int &n1,
                       int &m2,
                       int &n2,
-                      double *arr1,
-                      double *arr2,
-                      double *res)
+                      T *arr1,
+                      T *arr2,
+                      T *res)
 {
     /*
         Parameters:
@@ -161,24 +161,8 @@ void MultiplicationHF(grid<T> &a,
         std::copy(b.arr + startPntrForSecond, b.arr + startPntrForSecond + (m2 * n2), arr2);
 
         // Perform matrix multiplication
-        cblas_dgemm(
-            CblasRowMajor,
-            CblasNoTrans,
-            CblasNoTrans,
-            m1,
-            n2,
-            n1,
-            1.0,
-            arr1,
-            n1,
-            arr2,
-            n2,
-            0.0,
-            res,
-            n2);
-
-        // If Grids are float type
-        // cblas_sgemm (
+        // For double
+        // cblas_dgemm(
         //     CblasRowMajor,
         //     CblasNoTrans,
         //     CblasNoTrans,
@@ -193,6 +177,23 @@ void MultiplicationHF(grid<T> &a,
         //     0.0,
         //     res,
         //     n2);
+
+        // If Grids are float type
+        cblas_sgemm (
+            CblasRowMajor,
+            CblasNoTrans,
+            CblasNoTrans,
+            m1,
+            n2,
+            n1,
+            1.0,
+            arr1,
+            n1,
+            arr2,
+            n2,
+            0.0,
+            res,
+            n2);
 
         int startCrntIndexRes = c.GetIndex(index3);
 
@@ -318,23 +319,3 @@ void ScalarMul(grid<T> &a, double scalar)
 {
     cblas_dscal(a.size, scalar, a.arr, 1);
 }
-
-// std::vector<NeuroVec<double>> ReadTxtFile(std::string path)
-// {
-//     std::fstream newFile;
-//     std::string temp;
-//     std::vector<NeuroVec<double>> res;
-//     newFile.open(path, std::ios::in);
-//     if (!newFile.is_open())
-//     {
-//         std::cerr << "Error: Could not open file " << path << std::endl;
-//         exit(0);
-//     }
-    
-//     while (getline(newFile, temp))
-//     {
-//         if (temp != "")
-//             res.push_back(ConvertVectorToNeuroVec(SplitString(temp)));
-//     }
-//     return res;
-// }

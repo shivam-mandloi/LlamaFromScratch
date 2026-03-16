@@ -64,3 +64,15 @@ grid<T> VectorToGrid(std::vector<T> &arr)
     std::copy(arr.begin(), arr.end(), res.arr);
     return res;
 }
+
+
+void LoadBin(std::string& filename, float* arr, size_t numElement)
+{
+    filename = weightPathLocation + "/" + filename;
+    std::ifstream file(filename, std::ios::binary);
+
+    if (!file)
+        throw std::runtime_error("Could not open file");
+
+    file.read(reinterpret_cast<char*>(arr), numElement * sizeof(float));    
+}

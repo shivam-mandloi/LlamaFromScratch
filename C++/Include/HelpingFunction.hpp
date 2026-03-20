@@ -7,7 +7,7 @@
 
 #include "grid.hpp"
 
-std::string weightPathLocation = "/mnt/c/Users/shiva/Desktop/IISC/LLAMA/LLAMA_Weights";
+std::string weightPathLocation = "/home/shivam/ssd_data/project/llamaC++/Weight";
 
 std::string ReadTxtFile(std::string fileName)
 {
@@ -66,9 +66,10 @@ grid<T> VectorToGrid(std::vector<T> &arr)
 }
 
 
-void LoadBin(std::string& filename, float* arr, size_t numElement)
+void LoadBin(std::string filename, float* arr, size_t numElement)
 {
     filename = weightPathLocation + "/" + filename;
+    
     std::ifstream file(filename, std::ios::binary);
 
     if (!file)

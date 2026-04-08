@@ -2,8 +2,9 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include <ATen/ATen.h>
 
-#include "grid.hpp"
 #include "HelpingFunction.hpp"
 
 class tokenizer
@@ -30,7 +31,7 @@ public:
             vocabMap[vocabArr[i]] = i;
     }
 
-    grid<int> encode(std::string text)
+    at::Tensor encode(std::string text)
     {
         std::vector<std::string> splitedText;
 
@@ -95,17 +96,17 @@ public:
         // Convert to token to index
         for (int i = 0; i < splitedText.size(); i++)
             res[i + 1] = vocabMap[splitedText[i]];
-        grid<int> encRes = VectorToGrid(res);
+
+        std::vector<int64_t> sizeOfEncodeVector = {static_cast<int64_t>(res.size()), };
+        at::Tensor encRes = at::from_blob(res.data(), sizeOfEncodeVector, at::kInt).clone();
         return encRes;
     }
 
-    std::string decode(grid<int> encd)
+    std::string decode(at::Tensor encd)
     {
         std::string decdString = "";
-        for (int i = 0; i < encd.size; i++)
-        {
-            decdString += vocabArr[encd(i)];
-        }
+        for (int i = 0; i < encd.size(0); i++)
+            decdString += vocabArr[encd[i].item<int>()];        
 
         size_t pos;
 

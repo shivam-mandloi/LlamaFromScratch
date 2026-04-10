@@ -118,3 +118,23 @@ public:
         return decdString;
     }
 };
+
+class Attention
+{
+    
+};
+
+class MLP
+{
+
+};
+
+class Transfomer
+{
+
+};
+
+class llamma
+{
+
+};

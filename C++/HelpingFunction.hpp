@@ -5,7 +5,6 @@
 #include <vector>
 #include <thread>
 
-
 std::string weightPathLocation = "/mnt/c/Users/shiva/Desktop/IISC/LLAMA/LLAMA_Weights";
 
 std::string ReadTxtFile(std::string fileName)
@@ -28,26 +27,27 @@ std::string ReadTxtFile(std::string fileName)
     return res;
 }
 
-std::vector<std::string> SplitString(const std::string& str, const std::string& spliter) 
+std::vector<std::string> SplitString(const std::string &str, const std::string &spliter)
 {
     std::vector<std::string> res;
-    
-    if (str.empty() || spliter.empty()) return res;
+
+    if (str.empty() || spliter.empty())
+        return res;
 
     size_t start = 0;
     size_t end = str.find(spliter);
 
-    while (end != std::string::npos) 
-    {        
-        if (end > start) 
+    while (end != std::string::npos)
+    {
+        if (end > start)
         {
             res.emplace_back(str.substr(start, end - start));
-        }        
-        start = end + spliter.length();        
+        }
+        start = end + spliter.length();
         end = str.find(spliter, start);
     }
-    
-    if (start < str.length()) 
+
+    if (start < str.length())
     {
         res.emplace_back(str.substr(start));
     }
@@ -55,14 +55,36 @@ std::vector<std::string> SplitString(const std::string& str, const std::string& 
     return res;
 }
 
-void LoadBin(std::string filename, float* arr, size_t numElement)
+void LoadBin(std::string filename, float *arr, size_t numElement)
 {
     filename = weightPathLocation + "/" + filename;
-    
+
     std::ifstream file(filename, std::ios::binary);
 
     if (!file)
         throw std::runtime_error("Could not open file");
 
-    file.read(reinterpret_cast<char*>(arr), numElement * sizeof(float));    
+    file.read(reinterpret_cast<char *>(arr), numElement * sizeof(float));
+}
+
+at::Tensor LoadTensor(std::string filename, std::vector<int64_t> shape)
+{
+    float *arr = nullptr;
+    try
+    {
+        int64_t size = 1;
+        for (int64_t ele : shape)
+            size *= ele;
+        arr = new float[size];
+        LoadBin(filename, arr, size);
+
+        at::Tensor mat = at::from_blob(arr, shape, at::kFloat).clone();
+        delete[] arr;
+        return mat;
+    }
+    catch (const std::exception &e)
+    {
+        delete[] arr;
+        throw;
+    }
 }

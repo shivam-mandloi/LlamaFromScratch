@@ -5,7 +5,7 @@
 #include <vector>
 #include <thread>
 
-std::string weightPathLocation = "/mnt/c/Users/shiva/Desktop/IISC/LLAMA/LLAMA_Weights";
+std::string weightPathLocation = "";
 
 std::string ReadTxtFile(std::string fileName)
 {
@@ -69,22 +69,20 @@ void LoadBin(std::string filename, float *arr, size_t numElement)
 
 at::Tensor LoadTensor(std::string filename, std::vector<int64_t> shape)
 {
-    float *arr = nullptr;
-    try
-    {
-        int64_t size = 1;
-        for (int64_t ele : shape)
-            size *= ele;
-        arr = new float[size];
-        LoadBin(filename, arr, size);
+    filename = weightPathLocation + "/" + filename;
 
-        at::Tensor mat = at::from_blob(arr, shape, at::kFloat).clone();
-        delete[] arr;
-        return mat;
-    }
-    catch (const std::exception &e)
-    {
-        delete[] arr;
-        throw;
-    }
+    int64_t size = 1;
+    for (int64_t ele : shape)
+        size *= ele;
+
+    at::Tensor tensor = at::empty(shape, at::kFloat);
+
+    std::ifstream file(filename, std::ios::binary);
+    if (!file)
+        throw std::runtime_error("Could not open file");
+
+    file.read(reinterpret_cast<char *>(tensor.data_ptr<float>()),
+              size * sizeof(float));
+
+    return tensor;
 }

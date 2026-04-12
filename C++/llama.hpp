@@ -121,7 +121,25 @@ public:
 
 class Attention
 {
-    
+at::Tensor query, key, value, output;
+
+public:
+    Attention(int index, std::vector<int64_t> querySize, 
+        std::vector<int64_t> keySize, 
+        std::vector<int64_t> valueSize,
+        std::vector<int64_t> outputSize)
+    {
+        // Load Parameters
+        query = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.q_proj.weight.bin", querySize);
+        key = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.k_proj.weight.bin", keySize);
+        value = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.v_proj.weight.bin", valueSize);
+        output = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.o_proj.weight.bin", outputSize);
+    }
+
+    void forward()
+    {
+
+    }
 };
 
 class MLP

@@ -5,7 +5,7 @@
 #include <vector>
 #include <thread>
 
-std::string weightPathLocation = "";
+std::string weightPathLocation = "/mnt/c/Users/shiva/Desktop/IISC/LLAMA/LLAMA_Weights";
 
 std::string ReadTxtFile(std::string fileName)
 {

@@ -8,6 +8,25 @@
 
 #include "HelpingFunction.hpp"
 
+void Softmax(at::Tensor &input)
+{
+    // Only Create for the Attention, not generalized version
+    /*
+        input: (batch, 24, 1, seqLen)
+        output: (batch, 24, 1, seqLen)
+    */
+
+    // argument: Tensor, dim, keepDim
+    auto result = at::max(input, -1, true);
+    at::Tensor maxVal = std::get<0>(result);
+
+    input -= maxVal;
+    input.exp_();
+
+    at::Tensor sumVal = input.sum(-1, true);
+    input /= sumVal;
+}
+
 class tokenizer
 {
     std::string spaceEnc = "Ġ", newLine = "Ċ";
@@ -124,6 +143,12 @@ public:
 
 class Attention
 {
+    /*
+        kCache: b X s X h X n
+        vCache: b X s X h X n
+
+        b = batch size | s = sequence size | h = number of head | n = qkvDim
+    */
     at::Tensor query, key, value, output, kCache, vCache;
     int qkvDim = 128;
 
@@ -131,72 +156,114 @@ public:
     Attention(int index, std::vector<int64_t> querySize,
               std::vector<int64_t> keySize,
               std::vector<int64_t> valueSize,
-              std::vector<int64_t> outputSize)
+              std::vector<int64_t> outputSize,
+              int batchSize,
+              int maxSeqLen)
     {
         // Load Parameters
+        kCache = at::zeros({batchSize, maxSeqLen, 8, 128});
+        vCache = at::zeros({batchSize, maxSeqLen, 8, 128});
+
         query = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.q_proj.weight.bin", querySize);
         key = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.k_proj.weight.bin", keySize);
         value = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.v_proj.weight.bin", valueSize);
         output = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.o_proj.weight.bin", outputSize);
     }
 
-    void forward(at::Tensor x,
-                 at::Tensor mask,
-                 std::vector<float> &sinTheta,
-                 std::vector<float> &cosTheta,
-                 int seqLen)
+    at::Tensor forward(at::Tensor &inp,
+                       std::vector<float> &sinTheta,
+                       std::vector<float> &cosTheta,
+                       int seqLen)
     {
         /*
             x: (b X n)
             ropeTheta: (qkvDim / 2)
-            sinTheta: virtualy size (seqLen X (qkvDim/2))
-            cosTheta: virtualy size (seqLen X (qkvDim/2))
+            sinTheta: virtualy size (batch size X (qkvDim/2))
+            cosTheta: virtualy size (batch size X (qkvDim/2))
             seqlen: sequence size
 
             For sinTheta and cosTheta have higher or equal size to sequence length
         */
 
         // Get the bath, seqLen and dim info
-        int64_t b = x.size(0), n = x.size(2);
+        int64_t b = inp.size(0), n = inp.size(1);
 
         // Dim: b X (head * qkvDim)
-        at::Tensor q = x.matmul(query.t());
-        at::Tensor k = x.matmul(key.t());
-        at::Tensor v = x.matmul(value.t());
+        at::Tensor q = inp.matmul(query.t());
+        at::Tensor k = inp.matmul(key.t());
+        at::Tensor v = inp.matmul(value.t());
 
-        q = q.view({b, 24, 128});
-        v = v.view({b, 8, 128});
-        k = k.view({b, 8, 128});
+        q = q.contiguous().view({b, 24, qkvDim / 2, 2});
+        v = v.contiguous().view({b, 8, qkvDim});
+        k = k.contiguous().view({b, 8, qkvDim / 2, 2});
 
         /*
             ROPE Implementation
         */
 
-        // Dim: seq X (qkvDim/2)
+        // Dim: 1 X 1 X (qkvDim/2)
         // generate the last sin and cos tensor from the vector
-        at::Tensor sin = at::from_blob(sinTheta.data() + static_cast<int>((seqLen * (qkvDim / 2))), {static_cast<int64_t>(qkvDim / 2)}).unsqueeze(0).unsqueeze(0);
-        at::Tensor cos = at::from_blob(cosTheta.data() + static_cast<int>((seqLen * (qkvDim / 2))), {static_cast<int64_t>(qkvDim / 2)}).unsqueeze(0).unsqueeze(0);
-        
+        at::Tensor sin = at::from_blob(sinTheta.data() + static_cast<int>((seqLen * (qkvDim / 2))), {1, 1, static_cast<int64_t>(qkvDim / 2)});
+        at::Tensor cos = at::from_blob(cosTheta.data() + static_cast<int>((seqLen * (qkvDim / 2))), {1, 1, static_cast<int64_t>(qkvDim / 2)});
+
         // Generate the sin and cos value for the query
-        at::Tensor tSin = sin.repeat({b, 24, 1});
-        at::Tensor tCos = cos.repeat({b, 24, 1});
+        at::Tensor tSin = sin.expand({b, 24, sin.size(-1)});
+        at::Tensor tCos = cos.expand({b, 24, cos.size(-1)});
 
+        auto x = q.select(-1, 0);
+        auto y = q.select(-1, 1);
 
-        q = at::cat({
-            q.slice(-1, 0, static_cast<int>(seqLen/2)) * tCos - q.slice(-1, static_cast<int>(seqLen/2), seqLen) * tSin,
-            q.slice(-1, 0, static_cast<int>(seqLen/2)) * tSin + q.slice(-1, static_cast<int>(seqLen/2), seqLen) * tCos
-        }, -1);
+        at::Tensor newX = x * tCos - y * tSin;
+        at::Tensor newY = x * tSin + y * tCos;
 
+        q.select(-1, 0).copy_(newX);
+        q.select(-1, 1).copy_(newY);
+
+        q = q.view({b, 24, qkvDim});
 
         // Generate the sin and cos value for the key
-        
-        tSin = sin.repeat({b, 8, 1});
-        tCos = cos.repeat({b, 8, 1});
+        tSin = sin.expand({b, 8, sin.size(-1)});
+        tCos = cos.expand({b, 8, cos.size(-1)});
 
-        q = at::cat({
-            k.slice(-1, 0, static_cast<int>(seqLen/2)) * tCos - k.slice(-1, static_cast<int>(seqLen/2), seqLen) * tSin,
-            k.slice(-1, 0, static_cast<int>(seqLen/2)) * tSin + k.slice(-1, static_cast<int>(seqLen/2), seqLen) * tCos
-        }, -1);
+        x = k.select(-1, 0);
+        y = k.select(-1, 1);
+
+        newX = x * tCos - y * tSin;
+        newY = x * tSin + y * tCos;
+        k.select(-1, 0).copy_(newX);
+        k.select(-1, 1).copy_(newY);
+
+        k = k.view({b, 8, qkvDim});
+
+        // update the Key and value cache
+        // Add new element in sequence
+        kCache.slice(1, seqLen, seqLen + 1).copy_(k.unsqueeze(1));
+        vCache.slice(1, seqLen, seqLen + 1).copy_(v.unsqueeze(1));
+
+        // Make key and value to (batch X seqLen X 24 X qkvDim)
+        // repeat_interleave(a, b), repeat index b, by a times
+        // Slice first seqLen + 1 vectors from the cache
+        k = kCache.slice(1, 0, seqLen + 1).unsqueeze(3).repeat_interleave(3, 3).reshape({b, seqLen+1, 24, qkvDim});
+        v = vCache.slice(1, 0, seqLen + 1).unsqueeze(3).repeat_interleave(3, 3).reshape({b, seqLen+1, 24, qkvDim});
+
+        // Dim: (batch X 24 X 1 X qkvDim)
+        q = q.unsqueeze(1).permute({0, 2, 1, 3});
+
+        // Dim: (batch X 24 X qkvDim X seqLen)
+        k = k.permute({0, 2, 3, 1});
+
+        // (batch X 24 X seqLen X qkvDim)
+        v = v.permute({0, 2, 1, 3});
+
+        at::Tensor score = q.matmul(k) / std::sqrt(qkvDim);
+
+        // (batch X 24 X 1 X seqLen)
+        Softmax(score);
+
+        // (batch X 24 X 1 X qkvDim)
+        v = score.matmul(v).permute({0, 2, 1, 3}).contiguous().view({b, 1, 24 * qkvDim});
+
+        return v.matmul(output);
     }
 };
 
@@ -221,6 +288,9 @@ public:
         for (int i = 0; i < thetaData.size(); i++)
             thetaData[i] = pow(ropeTheta, -2 * (i) / qkvDim);
 
-        theta = at::from_blob(thetaData.data(), {static_cast<int64_t>(qkvDim / 2),}).clone();
+        theta = at::from_blob(thetaData.data(), {
+                                                    static_cast<int64_t>(qkvDim / 2),
+                                                })
+                    .clone();
     }
 };

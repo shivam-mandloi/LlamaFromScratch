@@ -2,133 +2,143 @@
 
 ## 📌 Overview
 
-This is a **learning-focused project** where I am implementing the **LLaMA-3 model from scratch in C++**.
+This is a **learning-focused project** where I am implementing the **LLaMA-3 model in C++**.
 
-The main goal of this project is **understanding**, not performance or production use.  
-I want to deeply understand how a large language model works internally by **building everything manually**, step by step.
+The main goal of this project is **deep understanding**, not performance or production use.  
+I want to understand how a large language model works internally by **building core components manually**, step by step.
 
 ---
 
 ## 🎯 Project Goals
 
-- Implement **LLaMA-3 architecture from scratch**
-- Use **C++**, without any external ML or math libraries
-- Only use **OpenBLAS (via WSL2)** for high-performance linear algebra operations
-- Work with **raw arrays** for matrix and vector representation
-- Focus on **CPU-based computation and optimization**
-- First implement **forward propagation**
-- Later try to implement **backward propagation (training)**
-- Eventually explore **GPU support** (after CPU version is clear)
+- Implement **LLaMA-3 architecture**
+- Use **C++ with ATen (LibTorch backend)** for tensor operations
+- Use **ATen only for optimized tensor computation**
+  - Matrix multiplication
+  - Tensor storage
+  - Basic tensor operations
+- Implement all core components manually:
+  - Attention
+  - Linear layers
+  - Feedforward Network (FNN)
+  - Normalization
+- Focus on **CPU-based execution**
+- Explore **GPU support (future)**
 
-This project is meant to **build intuition**, not to create a highly optimized or production-ready LLM.
+This project is meant to **build intuition at both model-level and system-level**.
 
 ---
 
 ## 🧠 Learning Philosophy
 
-- No shortcuts
-- No black-box ML libraries (except OpenBLAS for optimized linear algebra)
-- No Hugging Face APIs
-- No pre-built deep learning frameworks in C++
+- No black-box deep learning frameworks
+- No Hugging Face model APIs
+- No pre-built Transformer implementations
 
-Every component (attention, normalization, MLP, etc.) will be written manually so that the internal logic is fully clear.
+Only **ATen is used as a low-level tensor engine**.
+
+👉 Important idea:
+- **ATen = fast tensor operations**
+- **Everything else = written from scratch**
 
 ---
 
 ## 🔗 Related Project (Reference)
 
-This project is inspired by and follows ideas from my earlier work:
+This project is inspired by my earlier work:
 
 🔗 **NN-Blocks**  
 https://github.com/shivam-mandloi/NN-Blocks
 
 In **NN-Blocks**, I implemented neural network components from scratch in C++.  
-This LLaMA project builds on the same philosophy and learning style.
+This project builds on the same idea but moves toward **Transformer-scale models**.
 
 ---
 
 ## 🐍 Python → C++ Workflow
 
-I started this project with a **Python implementation of the LLaMA model**, and this part is now **completed**.  
-The Python version helped me clearly understand the model logic before moving to a low-level **C++ implementation**.
+I first implemented the model in Python to clearly understand the architecture, and then translated that understanding into C++.
 
 ---
 
 ### ✅ Python Version (Completed)
 
-- Implemented **LLaMA model from scratch**
-- Implemented **Transformer, Attention, and other components manually**
-- Uses **only PyTorch tensors**
-- No Hugging Face model APIs are used for the implementation
-- Can be used for **training or fine-tuning**
-- Intended mainly for **learning and understanding**
+- Full **LLaMA-style model implemented from scratch**
+- Transformer, Attention, and other components written manually
+- Uses **PyTorch tensors only (no model APIs)**
+- Can be used for training or experimentation
 
-#### 🔹 Weight Preparation (Important)
+#### 🔹 Weight Preparation
 
-I used **Hugging Face only to download the pretrained weights**, not for model implementation.
+I used Hugging Face **only to download pretrained weights**, not for implementation.
 
-To use the Python code:
+Steps:
 
-1. First run **`LlamaWeightStore.ipynb`**
-   - This notebook downloads LLaMA weights using Hugging Face
-   - Saves all weights in a format used by this project
+1. Run `LlamaWeightStore.ipynb`
+   - Downloads and stores weights
 
-2. After saving the weights, run **`llama.ipynb`**
-   - This notebook contains the **full LLaMA implementation**
-   - Includes Transformer, Attention, and forward pass logic
-   - Uses the saved weights for inference or experimentation
-
-You **must run `LlamaWeightStore.ipynb` first**, otherwise the model will not work.
+2. Run `llama.ipynb`
+   - Runs full model implementation using saved weights
 
 ---
 
-### 🚧 C++ Version (In Progress)
+### ✅ C++ Version (Completed - Core Inference)
 
-- C++ implementation will start now
-- Built **fully from scratch**
-- Uses **raw arrays** for vectors and matrices
-- Uses **OpenBLAS (via WSL2)** for optimized linear algebra operations
-- Focused mainly on **inference**
-- Helps understand **low-level execution and memory handling**
+- Implemented LLaMA using **C++ + ATen**
+- **ATen is used only for:**
+  - Tensor representation
+  - Efficient matrix multiplication
+  - Basic tensor operations
 
-The C++ version is the next step to deeply understand how LLaMA works at the system level.
+- **All model logic is implemented manually:**
+  - Attention mechanism
+  - KV cache
+  - Linear layers
+  - Feedforward network
+  - Masking logic
+
+- Implemented:
+  - ✅ Forward pass
+  - ✅ Autoregressive text generation
+  - ✅ KV cache optimization
+
+- Focus areas:
+  - Understanding memory layout
+  - Efficient tensor usage
+  - Low-level Transformer execution
 
 ---
-
-This Python → C++ separation helps in learning both:
-- **Model-level logic** (Python)
-- **System-level implementation** (C++)
-
 
 ## ⚠️ Important Note
 
-This is **not an optimized implementation** and **not intended for real-world deployment**.
+This is **not a production-ready implementation**.
 
-- It is slow
-- It is experimental
-- It is incomplete
+- Not optimized for large-scale deployment
+- Experimental and learning-focused
 
-But it can be used as:
-- A **base project**
+But useful as:
+- A **learning guide**
 - A **reference implementation**
-- A **learning guide** for understanding LLaMA-style models
+- A **base for deeper research**
 
 ---
 
 ## 🚧 Current Status
 
-- [x] Basic project setup
+- [x] Project setup
 - [x] Python LLaMA implementation (from scratch)
-- [ ] C++ forward pass (in progress)
-- [ ] Autoregressive text generation
-- [ ] Backward propagation
-- [ ] CPU optimizations
+- [x] C++ forward pass (ATen-based)
+- [x] Autoregressive generation
+- [x] KV cache optimization
 - [ ] GPU support (future)
 
 ---
 
 ## 📌 Final Note
 
-I hope to **complete this project before moving to the next one**.  
+The goal is to **fully understand LLaMA from both perspectives**:
 
-If you are also interested in learning **how LLMs work internally**, feel free to explore this project.
+- **High-level (Python)** → model logic  
+- **Low-level (C++)** → execution, memory, performance  
+
+If you're also trying to understand LLMs deeply, this project may help you think beyond frameworks.

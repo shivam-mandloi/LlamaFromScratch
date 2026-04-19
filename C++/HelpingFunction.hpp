@@ -74,15 +74,12 @@ at::Tensor LoadTensor(std::string filename, std::vector<int64_t> shape)
     int64_t size = 1;
     for (int64_t ele : shape)
         size *= ele;
-
-    at::Tensor tensor = at::empty(shape, at::kFloat);
+    at::Tensor tensor = at::empty(shape, at::kHalf);
 
     std::ifstream file(filename, std::ios::binary);
     if (!file)
-        throw std::runtime_error("Could not open file");
-
-    file.read(reinterpret_cast<char *>(tensor.data_ptr<float>()),
-              size * sizeof(float));
-
+        throw std::runtime_error("Could not open file: " + filename);
+    file.read(reinterpret_cast<char *>(tensor.data_ptr<at::Half>()),
+              size * sizeof(at::Half));
     return tensor;
 }

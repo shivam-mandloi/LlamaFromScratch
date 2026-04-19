@@ -25,6 +25,18 @@ void Softmax(at::Tensor &input)
 
     at::Tensor sumVal = input.sum(-1, true);
     input /= sumVal;
+
+    // input = at::softmax(input, -1);
+}
+
+at::Tensor SelectIndex(at::Tensor inpt)
+{
+    // inpt: (b, s, vocab)
+
+    auto lastLogits = inpt.select(1, inpt.size(1) - 1);
+
+    auto result = at::max(lastLogits, -1);    
+    return std::get<1>(result);
 }
 
 void RMSNorm(at::Tensor &x, at::Tensor &w, float eps = 1e-5)
@@ -35,9 +47,9 @@ void RMSNorm(at::Tensor &x, at::Tensor &w, float eps = 1e-5)
         w: n
         b = batch size | s = sequence | n = input dim
     */
-    x = x.pow(2).mean(-1, true);
-    at::Tensor rms = at::sqrt(x + eps);
-    x = (x / rms) * w;
+    at::Tensor variance = x.pow(2).mean(-1, true);
+    at::Tensor rms = at::sqrt(variance + eps);
+    x = (x / rms) * w.toType(at::kFloat);
 }
 
 at::Tensor CreateMask(int tSeq, int s)
@@ -61,19 +73,20 @@ void CreateSinAndCos(std::vector<float> &theta,
     /*
         -> Used by llama class
         -> Add new elements in sin and cos
+        -> Add numOfNewEle in sin and cos vector
     */
     int d = theta.size();
 
-    sin.reserve(sin.size() + numOfNewEle * d);
-    cos.reserve(cos.size() + numOfNewEle * d);
+    sin.resize((crnSeqLen + numOfNewEle) * d);
+    cos.resize((crnSeqLen + numOfNewEle) * d);
 
     for (int i = crnSeqLen; i < crnSeqLen + numOfNewEle; i++)
     {
         for (int j = 0; j < d; j++)
         {
             float val = i * theta[j];
-            sin[i + j] = std::sin(val);
-            cos[i + j] = std::cos(val);
+            sin[d*i + j] = std::sin(val);
+            cos[d*i + j] = std::cos(val);
         }
     }
 }
@@ -81,9 +94,9 @@ void CreateSinAndCos(std::vector<float> &theta,
 class tokenizer
 {
     std::string spaceEnc = "Ġ", newLine = "Ċ";
-    std::unordered_map<std::string, int> mergeMap, vocabMap;
     std::vector<std::string> vocabArr;
-
+    std::unordered_map<std::string, int> mergeMap, vocabMap;
+    
 public:
     tokenizer()
     {
@@ -102,7 +115,7 @@ public:
             vocabMap[vocabArr[i]] = i;
     }
 
-    at::Tensor encode(std::string text)
+    std::vector<int> encode(std::string text)
     {
         std::vector<std::string> splitedText;
 
@@ -167,19 +180,14 @@ public:
         // Convert to token to index
         for (int i = 0; i < splitedText.size(); i++)
             res[i + 1] = vocabMap[splitedText[i]];
-
-        std::vector<int64_t> sizeOfEncodeVector = {
-            static_cast<int64_t>(res.size()),
-        };
-        at::Tensor encRes = at::from_blob(res.data(), sizeOfEncodeVector, at::kInt).clone();
-        return encRes;
+        return res;
     }
 
-    std::string decode(at::Tensor encd)
+    std::string decode(std::vector<int> encd)
     {
         std::string decdString = "";
-        for (int i = 0; i < encd.size(0); i++)
-            decdString += vocabArr[encd[i].item<int>()];
+        for (int i = 0; i < encd.size(); i++)
+            decdString += vocabArr[encd[i]];
 
         size_t pos;
 
@@ -219,9 +227,7 @@ public:
         query = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.q_proj.weight.bin", querySize);
         key = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.k_proj.weight.bin", keySize);
         value = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.v_proj.weight.bin", valueSize);
-        output = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.o_proj.weight.bin", outputSize);
-
-        std::cout << "[*] complete load attention " << index << std::endl;
+        output = LoadTensor("model.layers." + std::to_string(index) + ".self_attn.o_proj.weight.bin", outputSize);        
     }
 
     at::Tensor forward(at::Tensor &inp,
@@ -238,20 +244,20 @@ public:
 
             For sinTheta and cosTheta have higher or equal size to sequence length
         */
-       std::cout << "start the Attention forward" << std::endl;
+        // std::cout << "start the Attention forward" << std::endl;
 
         // Get the bath, seqLen and dim info
         int64_t b = inp.size(0), s = inp.size(1), n = inp.size(2);
 
         // Dim: b X s X (head * qkvDim)
-        at::Tensor q = inp.matmul(query.t());
-        at::Tensor k = inp.matmul(key.t());
-        at::Tensor v = inp.matmul(value.t());
+        at::Tensor q = inp.matmul(query.toType(at::kFloat).t());
+        at::Tensor k = inp.matmul(key.toType(at::kFloat).t());
+        at::Tensor v = inp.matmul(value.toType(at::kFloat).t());
 
         // Dim: b X s X head X qkvDim/2 X 2
-        q = q.contiguous().view({b, s, 24, qkvDim / 2, 2});
+        q = q.contiguous().view({b, s, 24, 2, qkvDim / 2});
         v = v.contiguous().view({b, s, 8, qkvDim});
-        k = k.contiguous().view({b, s, 8, qkvDim / 2, 2});
+        k = k.contiguous().view({b, s, 8, 2, qkvDim / 2});
 
         /*
             ROPE Implementation
@@ -266,31 +272,31 @@ public:
         at::Tensor tSin = sin.expand({b, s, 24, sin.size(-1)});
         at::Tensor tCos = cos.expand({b, s, 24, cos.size(-1)});
 
-        auto x = q.select(-1, 0);
-        auto y = q.select(-1, 1);
+        auto x = q.select(-2, 0);
+        auto y = q.select(-2, 1);
 
         at::Tensor newX = x * tCos - y * tSin;
         at::Tensor newY = x * tSin + y * tCos;
 
-        q.select(-1, 0).copy_(newX);
-        q.select(-1, 1).copy_(newY);
+        q.select(-2, 0).copy_(newX);
+        q.select(-2, 1).copy_(newY);
 
-        q = q.view({b, s, 24, qkvDim});
+        q = q.contiguous().view({b, s, 24, qkvDim});
 
         // Generate the sin and cos value for the key
         tSin = sin.expand({b, s, 8, sin.size(-1)});
         tCos = cos.expand({b, s, 8, cos.size(-1)});
 
-        x = k.select(-1, 0);
-        y = k.select(-1, 1);
+        x = k.select(-2, 0);
+        y = k.select(-2, 1);
 
         newX = x * tCos - y * tSin;
         newY = x * tSin + y * tCos;
 
-        k.select(-1, 0).copy_(newX);
-        k.select(-1, 1).copy_(newY);
+        k.select(-2, 0).copy_(newX);
+        k.select(-2, 1).copy_(newY);
 
-        k = k.view({b, s, 8, qkvDim});
+        k = k.contiguous().view({b, s, 8, qkvDim});
 
         // update the Key and value cache
         // Add s new elements in sequence
@@ -329,7 +335,7 @@ public:
         // (batch X 24 X s X qkvDim)
         v = score.matmul(v).permute({0, 2, 1, 3}).contiguous().view({b, s, 24 * qkvDim});
 
-        return v.matmul(output.t());
+        return v.matmul(output.toType(at::kFloat).t());
     }
 };
 
@@ -349,8 +355,7 @@ public:
         // [8192, n]
         up = LoadTensor("model.layers." + std::to_string(index) + ".mlp.up_proj.weight.bin", upSize);
         // [8192, n]
-        gate = LoadTensor("model.layers." + std::to_string(index) + ".mlp.gate_proj.weight.bin", gateSize);
-        std::cout << "[*] complete load MLP " << index << std::endl;
+        gate = LoadTensor("model.layers." + std::to_string(index) + ".mlp.gate_proj.weight.bin", gateSize);        
     }
 
     at::Tensor forward(at::Tensor &x)
@@ -359,20 +364,14 @@ public:
             x: b X s X n
             b = batch size | s = sequence | n = input dim
         */
-       std::cout << "start the MLP forward" << std::endl;
-       std::cout << "MLP Input size " << x.sizes() << std::endl;
-       std::cout << "Gate size: " << gate.sizes() << " up size" << up.sizes() << std::endl;
-        at::Tensor gateOut = gate.matmul(x.permute({0, 2, 1}));
-        // std::cout << "gate complet" <<
-        at::Tensor upOut = up.matmul(x.permute({0, 2, 1}));
+        at::Tensor gateOut = gate.toType(at::kFloat).matmul(x.permute({0, 2, 1}));
+        at::Tensor upOut = up.toType(at::kFloat).matmul(x.permute({0, 2, 1}));
 
         gateOut *= at::sigmoid(gateOut);
-        // std::cout << gate.sizes() << " " << up.sizes() << std::endl;
 
         gateOut = gateOut * upOut;
-        std::cout << "Done MLP" << std::endl;
 
-        return down.matmul(gateOut).permute({0, 2, 1});
+        return down.toType(at::kFloat).matmul(gateOut).permute({0, 2, 1});
     }
 };
 
@@ -398,8 +397,7 @@ public:
                                  mlp(index, downSize, upSize, gateSize)
     {
         inputRMSNorm = LoadTensor("model.layers." + std::to_string(index) + ".input_layernorm.weight.bin", inputRMSNormSize);
-        postAttnRMSNorm = LoadTensor("model.layers." + std::to_string(index) + ".post_attention_layernorm.weight.bin", postAttnRMSNormSize);
-        std::cout << "[*] complete load transformer " << index << std::endl;
+        postAttnRMSNorm = LoadTensor("model.layers." + std::to_string(index) + ".post_attention_layernorm.weight.bin", postAttnRMSNormSize);        
     }
 
     void forward(at::Tensor &inp,
@@ -411,43 +409,39 @@ public:
             inp: b X s X n
             b = batch size | s = sequence | n = input dim
         */
-
-        std::cout << "input size: " << inp.sizes() << std::endl; 
         at::Tensor attnInp = inp.clone();
         RMSNorm(attnInp, inputRMSNorm);
 
-        attnInp = attn.forward(inp, sinTheta, cosTheta, seqLen);
+        attnInp = attn.forward(attnInp, sinTheta, cosTheta, seqLen);
         inp = inp + attnInp;
         attnInp = inp.clone();
 
         RMSNorm(attnInp, postAttnRMSNorm);
         attnInp = mlp.forward(attnInp);
         inp += attnInp;
-        std::cout << "input size: " << inp.sizes() << std::endl;
-        std::cout << inp.sizes() << " " << attnInp.sizes() << std::endl;
     }
 };
 
 class llamma
 {
     at::Tensor embd, rmsNorm;
-    int qkvDim = 128, crnSeqLen;
+    int qkvDim = 128, crnSeqLen = 0, maxSeqLen = 0, lastGeneratedEle = -1;
     float ropeTheta = 500000.0;
     std::vector<Transformer> layer;
     tokenizer tkn;
     std::vector<float> sinTheta, cosTheta, theta;
 
 public:
-    llamma(int batchSize, int maxSeqLen, std::string prevCmnd = "")
+    llamma(int batchSize, int _maxSeqLen, std::string prevCmnd = "") : maxSeqLen(_maxSeqLen)
     {
+        std::cout << "[#] Start loading model" << std::endl;
         theta = std::vector<float>(qkvDim / 2, 0);
         for (int i = 0; i < qkvDim / 2; i++)
-            theta[i] = pow(ropeTheta, -2 * (i) / qkvDim);
+            theta[i] = pow(ropeTheta, (-2.0f * i) / qkvDim);
 
         /*
             -> Define only for the llama 3 (3B)
-        */
-        std::cout << "start llama model" << std::endl;
+        */        
         std::vector<int64_t> queryOutSize = {3072, 3072},
                              keyValueSize = {1024, 3072},
                              downSize = {3072, 8192},
@@ -457,9 +451,7 @@ public:
                              embdSize = {128256, 3072};
 
         rmsNorm = LoadTensor("model.norm.weight.bin", inputPostRMSNormSize);
-        embd = LoadTensor("model.embed_tokens.weight.bin", embdSize);
-        std::cout << "load rmsNorm and embd" << std::endl;
-        std::cout << embd.sizes() << std::endl;
+        embd = LoadTensor("model.embed_tokens.weight.bin", embdSize);        
         for (int i = 0; i < 28; i++)
         {
             layer.emplace_back(i,
@@ -475,17 +467,24 @@ public:
                                batchSize,
                                maxSeqLen);
         }
-
-        std::cout << "load all layers" << std::endl;
+        
+        CreateSinAndCos(theta, sinTheta, cosTheta, 0, maxSeqLen);
+        std::cout << "[*] Successfully load model" << std::endl;
 
         if (prevCmnd.size() != 0)
-        {
+        {                        
             /*
                 forward pass the info given at start
                 and generate the cos and sin vector
             */
-            at::Tensor index = tkn.encode(prevCmnd);
-            CreateSinAndCos(theta, sinTheta, cosTheta, 0, index.size(0));
+
+            std::cout << "[#] Start process the data" << std::endl;
+
+            std::vector<int> indexVec = tkn.encode(prevCmnd);
+            at::Tensor index = at::from_blob(indexVec.data(), {static_cast<int64_t>(indexVec.size())},
+                                             at::TensorOptions().dtype(at::kInt));
+
+            // Create full max seq len sin and cos vector
             crnSeqLen += index.size(0);
             if (crnSeqLen >= maxSeqLen)
             {
@@ -493,22 +492,73 @@ public:
                 exit(0);
             }
             at::Tensor inpt = at::index_select(embd, 0, index);
-            std::cout << "embedding forward" << std::endl;
+
             // View to include batch
             inpt = inpt.unsqueeze(0).view({1, index.size(0), 3072}).contiguous();
-            std::cout << "start the forward" << std::endl;
-            std::cout << inpt.sizes() << std::endl;
-            
+
             for (int i = 0; i < 28; i++)
             {
-                layer[0].forward(inpt, sinTheta, cosTheta, 0);
-                std::cout << "[*] layer " << i << " completed" << std::endl;
+                layer[i].forward(inpt, sinTheta, cosTheta, 0);
             }
         }
     }
 
-    std::string call(std::string inp)
+    void call(std::string inp)
     {
-        at::Tensor inptIndex = tkn.encode(inp);
+        // Encode input
+        std::vector<int> index = tkn.encode(inp);
+        at::Tensor inpIndex = at::from_blob(index.data(), {static_cast<int64_t>(index.size())},at::TensorOptions().dtype(at::kInt));
+          
+        if (crnSeqLen + index.size() >= maxSeqLen)
+        {
+            std::cerr << "[!] You can't just put more then " << maxSeqLen << " your current fucking sequence lenght is " << crnSeqLen << std::endl;
+            exit(0);
+        }
+        at::Tensor inpt = at::index_select(embd, 0, inpIndex);
+        inpt = inpt.unsqueeze(0).view({1, inpIndex.size(0), 3072}).contiguous();
+
+        // Call all the layers
+        for (int i = 0; i < 28; i++)
+        {
+            layer[i].forward(inpt, sinTheta, cosTheta, crnSeqLen);            
+        }
+
+        RMSNorm(inpt, rmsNorm);
+        inpt = inpt.matmul(embd.toType(at::kFloat).t());
+        int nextEle = SelectIndex(inpt).item<int>();
+
+        crnSeqLen += index.size();
+        lastGeneratedEle = nextEle;
+    }
+
+    std::string GetNext()
+    {        
+        // Check if last generated element was end of text
+        if(lastGeneratedEle == 128001)
+            return "endOfText";
+        
+        // Decode las generated element
+        std::string out = tkn.decode({lastGeneratedEle}); 
+        at::Tensor inpt = embd[lastGeneratedEle].clone().unsqueeze(0).unsqueeze(0);
+
+        // Call all the layers
+        for (int i = 0; i < 28; i++)
+        {
+            layer[i].forward(inpt, sinTheta, cosTheta, crnSeqLen);
+        }
+        RMSNorm(inpt, rmsNorm);
+        inpt = inpt.matmul(embd.toType(at::kFloat).t());
+
+        // Select the next element
+        lastGeneratedEle = SelectIndex(inpt).item<int>();        
+
+        crnSeqLen += 1;
+        if (crnSeqLen >= maxSeqLen)
+        {
+            std::cerr << "[!] You can't just put more then " << maxSeqLen << " your current fucking sequence lenght is " << crnSeqLen << std::endl;
+            exit(0);            
+        }
+
+        return out;
     }
 };
